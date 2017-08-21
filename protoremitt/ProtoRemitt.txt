@@ -1,0 +1,107 @@
+pragma solidity ^ 0.4.12;
+
+contract Remittance {
+    bool public isRunning;
+    bool public remittanceInProgress;
+    address owner;
+    bytes32 passwordHash;
+    uint deployPrice;
+    uint public contractCommision;
+    uint public claimAttempts;
+    //uint public coolOffDuration;
+    //uint  public duration;
+    
+    struct remitStruct {
+        address account;
+        uint amountDue;
+        uint amountClaimed;
+    }
+    
+    mapping (address => remitStruct) public remitStructs;
+    
+    event LogIncorrectPasswordClaimAttempted(bytes32 _senderPasswordHash, bytes32 _receiverPasswordHash);
+    
+    modifier adminOnlyAccess() {  
+        require (msg.sender == owner);
+        _;
+    }
+    
+    modifier contracIsActive{
+        require(isRunning == true);
+        _;
+    }
+    
+    
+    function Remittance() {
+        isRunning = true;
+        owner = msg.sender;
+        //capture deploy gas price
+    }
+    
+    function deposit(address _receiver, address _exchanger,
+                        bytes32 _senderPassword, 
+                        bytes32 _receiverPassword )
+        public 
+        payable
+        contracIsActive
+        returns (bool success)
+    {
+        if(_receiver != address(0) || _exchanger != address(0)) revert();
+        //?trim passswords
+        
+        // hash passwords and put in storage
+        passwordHash = keccak256(keccak256(_senderPassword), keccak256(_receiverPassword));
+        
+        // contractCommision =  function of deployPrice -set amount
+            
+        // add deposit to 'Escrow' struct
+        
+        
+        remittanceInProgress = true;
+        return true;
+    }
+    
+    function claim(bytes32 _senderPasswordHash, bytes32 _receiverPasswordHash)
+        public
+        payable
+        contracIsActive
+        returns (bool success)
+    {
+        //check hashes
+        if (keccak256(_senderPasswordHash, _receiverPasswordHash) != passwordHash) 
+        {
+            claimAttempts++;
+            LogIncorrectPasswordClaimAttempted(_senderPasswordHash, _receiverPasswordHash);
+            throw;
+            //perhaps revert is better here ?
+        }
+        
+        //Empty 'Escrow' struct and fill exchangeer's struct
+        
+        //prevent re-entrancy and allocate amounts
+        
+        claimAttempts ++;
+        remittanceInProgress = false;
+        return true;
+    }
+    
+    
+    
+    function switchRunning(bool onOff)
+        adminOnlyAccess
+        public 
+    {
+       if(!remittanceInProgress){
+         isRunning =  onOff; 
+       }
+    }
+    
+    function Kill()
+        adminOnlyAccess
+        public
+    {
+        suicide(owner);
+    }
+    
+    function () {}
+}
