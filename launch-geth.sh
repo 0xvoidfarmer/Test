@@ -10,4 +10,4 @@ else
   geth --networkid 42 --datadir ~/.ethereum.net42 --rpc --rpcport8545  --rpcaddr 0.0.0.0 --rpccorsdomain "*" --rpcapi "eth,web3" --password $BASEDIR/password.txt account new
   geth --networkid 42 --datadir ~/.ethereum.net42 --rpc --rpcport8545  --rpcaddr 0.0.0.0 --rpccorsdomain "*" --rpcapi "eth,web3" --password $BASEDIR/password.txt account new
   geth --networkid 42 --datadir ~/.ethereum.net42 --rpc --rpcport8545  --rpcaddr 0.0.0.0 --rpccorsdomain "*" --rpcapi "eth,web3" --password $BASEDIR/password.txt account new
-fi
+
