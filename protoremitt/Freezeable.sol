@@ -1,5 +1,6 @@
+pragma solidity ^0.4.6;
 
-import "Owned.sol";
+import "./Owned.sol";
 
 contract Freezeable is Owned {
     
