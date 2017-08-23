@@ -15,6 +15,9 @@ contract Hub is Freezeable {
      }
      
      event LogNewSpawn(address sponsor, address spwanAddress /*, [type1 arg1, ...typen, argn] spawn specific parameters */);
+     event LogSpawnFrozen(address sender, address spawnAddress);
+     event LogSpawnUnFrozen(address sender, address spawnAddress);
+     event LogSpawnNewOwner(address sender,address oldOwner, address newOwner); 
      
      function getSpawnCount()
         public 
@@ -45,6 +48,7 @@ contract Hub is Freezeable {
         returns (bool success)
     {
         Spawn trustedSpawn = Spawn(_spawnAddress);
+        LogSpawnFrozen(msg.sender, _spawnAddress);
         return (trustedSpawn.switchRunningState(true));
     }
     
@@ -54,16 +58,18 @@ contract Hub is Freezeable {
         returns (bool success)
     {
         Spawn trustedSpawn = Spawn(_spawnAddress);
+        LogSpawnUnFrozen(msg.sender, _spawnAddress);
         return (trustedSpawn.switchRunningState(false));
     }
     
-    function changeSpawnOwner(address _spawnAddress, address newOwner)
+    function changeSpawnOwner(address _spawnAddress, address _newOwner)
         onlyOwner
         onlyIfSpawn(_spawnAddress)
         returns (bool success)
     {
         Spawn trustedSpawn = Spawn(_spawnAddress);
-        return (trustedSpawn.changeOwner(newOwner));
+        LogSpawnNewOwner(msg.sender, _spawnAddress, _newOwner);
+        return (trustedSpawn.changeOwner(_newOwner));
     }
         
         
