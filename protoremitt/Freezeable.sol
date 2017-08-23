@@ -6,7 +6,7 @@ contract Freezeable is Owned {
     
     bool public running;
     
-    event LogOnOffSwitch(bool switchState);
+    event LogOnOffSwitch(address sender, bool switchState);
     
     modifier onlyIfRunning {
         if(running == false) throw;
@@ -23,11 +23,10 @@ contract Freezeable is Owned {
         returns (bool success)
     {
         running = onOff;
-        LogOnOffSwitch(onOff);
+        LogOnOffSwitch(msg.sender, onOff);
         return true;
     }
     
     function () {}
-    
     
 }
