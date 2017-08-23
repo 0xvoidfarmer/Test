@@ -1,0 +1,29 @@
+1. EquityBanking
+
+A money banking scheme, where a fixed number of participants commit to contributing to a deposit account periodically and each period one 
+contributer gets a pre-agreed set sum of the period's total contribution. A form of savings with predetemined pay cycle.
+Used in communities in  unbanked nations as a form of savings/banking to prepare oneself for a large upcming expensiture 
+(e.g. Wedding, Birth, Trip etc)
+Befor the contract is insantiated,
+1. Participants set the rule for the payment schedule
+2. Participants agree on the value of  ε
+3.Can agree to set an inital "Buffer" deposit to mitigate possible future  non-payment
+etc...
+
+Example: Perons A,B,C,D,E,F,G and H commit to EACH contirbute (3 + ε) ETH to a deposit (contract) every 1st of the Month.
+ (where ε is ETH used ofr maintenance, gas fees can be aribitrary). On Jan 1st, the deposit has 24 ETH + 8ε and Person A gets 
+ the preagreed amount of 24ETH. On Feb 1st, person B gets 24 ETH and so on. By Sept 1st, the payment schedule cycles back to person A, whence the 
+ participants can agree to terminate or continue the scheme forward for another cycle.
+
+ 
+Implementation 
+can be made to extend the basic concept to differnet rules such as
+ - swap payment schedules between conseting participants 
+ - increase/ decrease contribution amount mid-way in the cycle
+ - make provisions to dissolve the scheme
+ - other provisions to mitigate game-theoretical loopholes
+ etc.
+
+==========================================================================================
+
+
