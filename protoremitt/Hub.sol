@@ -14,7 +14,7 @@ contract Hub is Freezeable {
          _;
      }
      
-     event LogNewSpawn(address spwanAddress /*, [type1 arg1, ...typen, argn] spawn specific parameters */);
+     event LogNewSpawn(address sponsor, address spwanAddress /*, [type1 arg1, ...typen, argn] spawn specific parameters */);
      
      function getSpawnCount()
         public 
@@ -28,13 +28,13 @@ contract Hub is Freezeable {
         public 
         returns (address spawnContract)
     {
-        /*
-        Spawn trustedSpawn = new Spawn(msg.sender, [type1 arg1, ...typen, argn]  );
-        spawns.puhs(trustedSpawn);
+        
+        Spawn trustedSpawn = new Spawn(msg.sender /*, [type1 arg1, ...typen, argn] */ );
+        spawns.push(trustedSpawn);
         spawnExists[trustedSpawn] = true;
-        LogNewSpawn(trustedSpawn,[type1 arg1, ...typen, argn] );
+        LogNewSpawn(msg.sender, trustedSpawn /*,[type1 arg1, ...typen, argn] */ );
         return trustedSpawn;
-        */
+        
     }
     
     //Pass through Admin Controls
