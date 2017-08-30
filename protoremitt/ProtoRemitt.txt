@@ -15,7 +15,7 @@ contract Remittance {
     
     struct RemitStruct { 
         address     depositor;
-        address     exhanger;
+        address     exchanger;
         uint        amountDue;
         uint        amountClaimed;
         bytes32     passwordHash;
@@ -25,7 +25,7 @@ contract Remittance {
     
     mapping (uint => RemitStruct) public remitStructs;
     
-    event LogSuccessfullyDeposited(uint remitId);
+    event LogSuccessfullyDeposited(uint remitId, uint amount);
     event LogSuccessfullyClaimed(address claimant, uint amount);
     
     modifier adminOnlyAccess() {  
@@ -37,7 +37,6 @@ contract Remittance {
         require(isRunning == true );
         _;
     }
-    
     
     function Remittance() {
         isRunning = true;
@@ -61,25 +60,62 @@ contract Remittance {
        
        
         remitIdCount++;
+        var amountToDeposit = (msg.value - contractCommision);
         RemitStruct memory newRemit = RemitStruct(msg.sender,
                                                 _exchanger,
-                                                (msg.value - contractCommision),
+                                                amountToDeposit,
                                                 0, 
                                                 keccak256(_depositorPassword, _receiverPassword),
                                                 block.number + duration,
                                                 true);
         remitStructs[remitIdCount] = newRemit;
-        
-        
             
         // add deposit to 'Escrow' struct
         
-        LogSuccessfullyDeposited(remitIdCount);
+        LogSuccessfullyDeposited(remitIdCount, amountToDeposit);
         remittanceInProgress++;
         return true;
     }
     
-    function isValidRemittance(uint _id)
+    
+    function claim(uint _remitId, bytes32 _depositorPassword, bytes32 _receiverPassword)
+        public
+        contractIsActive 
+        returns (bool success)
+    {
+        //if remittance is invalid throw
+        if(isValidRemittance(_remitId) == false) throw;
+       
+        if( (isDepositorAddress(_remitId, msg.sender))   ||  (isExchangerAddress(_remitId, msg.sender)) ) throw;
+        
+        //if depositor tries to claim BEFORE deadline, throw
+        if( !isPastDeadline( _remitId) && isDepositorAddress(_remitId, msg.sender) ) throw;
+        
+        //if exhanger tries to claim after deadline, throw
+        if( isPastDeadline( _remitId) && isExchangerAddress(_remitId, msg.sender) ) throw;
+        
+        //verify passwords
+        if (keccak256(_depositorPassword, _receiverPassword) != fetchPasswordHash(_remitId)) throw;
+        
+        
+        //Empty 'Escrow' struct and settle remit
+       var amountToClaim = remitStructs[_remitId].amountDue ;
+       if(amountToClaim == 0) throw;
+        remitStructs[_remitId].amountDue        -= amountToClaim;
+        remitStructs[_remitId].amountClaimed    += amountToClaim;
+        
+         //prevent re-entrancy and allocate amounts
+        if(!msg.sender.send(amountToClaim)) throw;
+        
+       LogSuccessfullyClaimed(msg.sender, fetchAmountDue(_remitId));
+       retireRemit(_remitId);
+        
+        return true;
+    }
+    
+    //Maintainance methods
+    
+     function isValidRemittance(uint _id)
         public 
         constant
         returns (bool status)
@@ -87,7 +123,7 @@ contract Remittance {
         return remitStructs[_id].isActive;
     }
     
-    function getPasswordHash(uint _id)
+    function fetchPasswordHash(uint _id)
         public 
         constant
         returns (bytes32 hash)
@@ -95,7 +131,7 @@ contract Remittance {
          return remitStructs[_id].passwordHash;
     }
     
-     function getAmountDue(uint _id)
+     function fetchAmountDue(uint _id)
         public 
         constant
         returns (uint due)
@@ -103,47 +139,39 @@ contract Remittance {
          return  remitStructs[_id].amountDue;
     }
     
-    function retireRemit(uint _id)
+    function isDepositorAddress(uint _id, address depositor)
+        public 
+        constant
+        returns (bool success )
+    {
+         return  !(remitStructs[_id].depositor != depositor );
+    }
+    
+     function isExchangerAddress(uint _id, address exchanger)
+        public 
+        constant
+        returns (bool success)
+    {
+        return  !(remitStructs[_id].exchanger != exchanger) ;
+    }
+    
+    function isPastDeadline(uint _id)
         public
+        constant
+        returns (bool success)
+    {
+        return remitStructs[_id].deadline > block.number ;
+    }
+    
+    
+    
+    function retireRemit(uint _id)
+        private
         contractIsActive
     {
         remitStructs[_id].isActive = false;
-    }
-        
-    
-    
-    function claim(uint _remitId, bytes32 _depositorPassword, bytes32 _receiverPassword)
-        public
-        payable
-        contractIsActive 
-        returns (bool success)
-    {
-         //if remittance is invalid throw
-         if(isValidRemittance(_remitId) == false) throw;
-        //if not sender or exhanger throw
-        //if( msg.sender == remitStructs(_remitId).depositor       |  remitStructs(_remitId).exhanger == msg.sender) throw;
-        
-        //if sender tries to claim BEFORE deadline, log event, return false
-        //if(remitStructs(_remitId).depositor  == msg.sender   |  remitStructs(_remitId).deadline > block.Number) throw;
-        
-        //if exhanger tries to claim after deadline, log event, return false
-        
-        
-        
-        //verify passwords
-        if (keccak256(_depositorPassword, _receiverPassword) != getPasswordHash(_remitId)) throw;
-        
-        
-        //Empty 'Escrow' struct and fill exchangeer's struct
-        
-        //prevent re-entrancy and allocate amounts
-        
-       LogSuccessfullyClaimed(msg.sender, getAmountDue(_remitId));
-       retireRemit(_remitId);
         if(remittanceInProgress > 0) {remittanceInProgress--;}
-        return true;
     }
-    
     
     
     function switchRunning(bool onOff)
