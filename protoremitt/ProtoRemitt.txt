@@ -1,15 +1,14 @@
-pragma solidity ^0.4.12;
+pragma solidity ^0.4.10;
 
 contract Remittance {
-    bool public isRunning;
-    bool public remittanceInProgress;
     address owner;
-   
+    bool public isRunning;
+    uint public remittanceInProgress;
     uint deployPrice;
     uint public contractCommision;
     uint public claimAttempts;
     uint public remitIdCount;
-    uint public deadline;
+    uint public duration;
   
     //uint public coolOffDuration;
     //uint  public duration;
@@ -20,6 +19,7 @@ contract Remittance {
         uint        amountDue;
         uint        amountClaimed;
         bytes32     passwordHash;
+        uint        deadline;
         bool        isActive;
     }
     
@@ -46,28 +46,27 @@ contract Remittance {
        // contractCommision =  function of deployPrice - fixed offset amount
     }
     
-    function deposit(address _receiver, address _exchanger, uint deposit,
-                        bytes32 _depositorPassword, 
+    function deposit(address _exchanger, bytes32 _depositorPassword, 
                         bytes32 _receiverPassword )
         public 
         payable
         contractIsActive
         returns (bool success)
     {
-        if(_receiver != address(0) || _exchanger != address(0)) revert();
+        if( _exchanger != address(0)) revert();
         //Trim passwords ?
-        // if  (blockNumber + duration > current blocok number) throw;
-        if ( msg.value + contractCommision < deposit) throw;
-        
+        // if  (blockNumber + duration > current block number) throw;
+        if (msg.value < contractCommision) throw;
         // contractCommision =  function of deployPrice -set amount
        
        
         remitIdCount++;
         RemitStruct memory newRemit = RemitStruct(msg.sender,
                                                 _exchanger,
-                                                deposit,
+                                                (msg.value - contractCommision),
                                                 0, 
                                                 keccak256(_depositorPassword, _receiverPassword),
+                                                block.number + duration,
                                                 true);
         remitStructs[remitIdCount] = newRemit;
         
@@ -76,7 +75,7 @@ contract Remittance {
         // add deposit to 'Escrow' struct
         
         LogSuccessfullyDeposited(remitIdCount);
-        remittanceInProgress = true;
+        remittanceInProgress++;
         return true;
     }
     
@@ -88,7 +87,32 @@ contract Remittance {
         return remitStructs[_id].isActive;
     }
     
-    function claim(uint _remitId, bytes32 _depositorPassword, bytes32 _receiverPasswordHash)
+    function getPasswordHash(uint _id)
+        public 
+        constant
+        returns (bytes32 hash)
+    {
+         return remitStructs[_id].passwordHash;
+    }
+    
+     function getAmountDue(uint _id)
+        public 
+        constant
+        returns (uint due)
+    {
+         return  remitStructs[_id].amountDue;
+    }
+    
+    function retireRemit(uint _id)
+        public
+        contractIsActive
+    {
+        remitStructs[_id].isActive = false;
+    }
+        
+    
+    
+    function claim(uint _remitId, bytes32 _depositorPassword, bytes32 _receiverPassword)
         public
         payable
         contractIsActive 
@@ -97,26 +121,26 @@ contract Remittance {
          //if remittance is invalid throw
          if(isValidRemittance(_remitId) == false) throw;
         //if not sender or exhanger throw
-        if(remitStructs(_remitId).depositor  == msg.sender  |  remitStructs(_remitId).exhanger == msg.sender)) throw;
+        //if( msg.sender == remitStructs(_remitId).depositor       |  remitStructs(_remitId).exhanger == msg.sender) throw;
         
         //if sender tries to claim BEFORE deadline, log event, return false
+        //if(remitStructs(_remitId).depositor  == msg.sender   |  remitStructs(_remitId).deadline > block.Number) throw;
         
         //if exhanger tries to claim after deadline, log event, return false
         
         
         
         //verify passwords
-        if (keccak256(_depositorPasswordHash, _receiverPasswordHash) != passwordHash) 
-        {
-            throw;
-        }
+        if (keccak256(_depositorPassword, _receiverPassword) != getPasswordHash(_remitId)) throw;
+        
         
         //Empty 'Escrow' struct and fill exchangeer's struct
         
         //prevent re-entrancy and allocate amounts
         
-       LogSuccessfullyClaimed(msg.sender, amount);
-        remittanceInProgress = false;
+       LogSuccessfullyClaimed(msg.sender, getAmountDue(_remitId));
+       retireRemit(_remitId);
+        if(remittanceInProgress > 0) {remittanceInProgress--;}
         return true;
     }
     
@@ -126,7 +150,7 @@ contract Remittance {
         adminOnlyAccess
         public 
     {
-       if(!remittanceInProgress){
+       if(remittanceInProgress == 0){
          isRunning =  onOff; 
        }
     }
